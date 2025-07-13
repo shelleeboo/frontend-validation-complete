@@ -1,0 +1,39 @@
+name: Deploy both branches to GitHub Pages
+
+on:
+  push:
+    branches: [main, starter]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: 'npm' }
+
+      - run: npm ci
+
+      - name: Build site for this branch
+        env:
+          BRANCH: ${{ github.ref_name }}
+          REPO:   ${{ github.event.repository.name }}
+        run: |
+          export BASE_URL="/$REPO/$BRANCH/"
+          npm run build
+          mkdir -p site/$BRANCH
+          cp -r dist/* site/$BRANCH/
+
+      - name: Publish to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: site
